@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff8e9">
+  <title>柠柠认汉字</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="heading">
+      <div class="brand-mark" aria-hidden="true">字</div>
+      <h1>柠柠认汉字</h1>
+    </header>
+
+    <section class="practice" aria-label="认字练习">
+      <div class="stage">
+        <div class="cloud cloud-left" aria-hidden="true"></div>
+        <div class="cloud cloud-right" aria-hidden="true"></div>
+        <button class="read-button" id="read-word" type="button">听读音</button>
+        <span class="position" id="position"></span>
+        <div class="floor" aria-hidden="true"></div>
+        <img class="bandit" id="bandit" src="assets/bandit.png" alt="爸爸班迪特">
+        <div class="board-slot">
+          <div class="board" id="board"><span id="glyph"></span></div>
+        </div>
+        <div class="student student-bluey">
+          <div class="student-window"><img id="bluey" src="assets/bluey.png" alt="坐在矮桌后的布鲁伊"></div>
+          <div class="desk" aria-hidden="true"></div>
+        </div>
+        <div class="student student-bingo">
+          <div class="student-window"><img id="bingo" src="assets/bingo.png" alt="坐在矮桌后的宾果"></div>
+          <div class="desk" aria-hidden="true"></div>
+        </div>
+        <span class="sr-only" id="announcement" aria-live="polite"></span>
+      </div>
+      <div class="controls">
+        <button class="nav-button" id="previous" type="button"><span aria-hidden="true">‹</span> 上一个</button>
+        <button class="correct-button" id="correct" type="button"><span aria-hidden="true">✓</span> 答对了</button>
+        <button class="nav-button" id="next" type="button">下一个 <span aria-hidden="true">›</span></button>
+      </div>
+      <p id="encouragement" class="encouragement" role="status"></p>
+    </section>
+
+    <section class="library" aria-labelledby="library-title">
+      <header class="library-heading">
+        <h2 id="library-title">汉字库</h2>
+        <span class="count" id="count"></span>
+        <div class="pagination" id="pagination" hidden>
+          <button id="previous-page" type="button" aria-label="字库上一页">‹</button>
+          <span id="page-number"></span>
+          <button id="next-page" type="button" aria-label="字库下一页">›</button>
+        </div>
+      </header>
+      <div class="word-list" id="word-list" aria-label="已添加的汉字"></div>
+      <div class="library-entry">
+        <form id="add-form" class="add-form">
+        <label for="new-words">补充汉字</label>
+        <div class="add-row">
+          <textarea id="new-words" rows="1" placeholder="例如　星 月 云" spellcheck="false" autocorrect="off"></textarea>
+          <button class="add-button" type="submit">添加汉字</button>
+        </div>
+        <p id="add-status" class="form-status" role="status"></p>
+        </form>
+        <p id="storage-warning" class="storage-warning" role="status" hidden>当前打开方式无法保存进度。请在支持本地存储的网页运行器中打开。</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
