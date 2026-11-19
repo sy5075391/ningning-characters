@@ -214,7 +214,7 @@ h2 { font-size: 1.12rem; }
   display: grid;
   grid-template-columns: 1fr 1.25fr 1fr;
   gap: clamp(6px, 2vw, 12px);
-  margin: 9px auto 0;
+  margin: 9px auto 8px;
   width: 100%;
   padding: 0 clamp(10px, 3vw, 24px);
   max-width: 36rem;
@@ -232,18 +232,6 @@ h2 { font-size: 1.12rem; }
 .nav-button:disabled { color: #536f82; background: #eff7fb; box-shadow: none; opacity: .63; }
 .correct-button { color: white; background: #267257; box-shadow: 0 3px 0 #19523d; }
 button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-.encouragement {
-  display: grid;
-  place-items: center;
-  height: 2.5em;
-  flex: 0 0 auto;
-  overflow-y: auto;
-  margin-top: 3px;
-  padding: 0 12px 5px;
-  text-align: center;
-  font-size: .9rem;
-  color: #285840;
-}
 
 .library {
   display: flex;
@@ -354,5 +342,4 @@ button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .read-button { top: 5px; left: 6px; min-height: 36px; }
   .student { height: 30%; }
   .controls { margin-top: 4px; }
-  .encouragement { height: 1.7em; }
 }

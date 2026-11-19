@@ -3,16 +3,7 @@
 const storageKey = "ningning-characters-v1";
 const starterWords = Array.from("人大小山水火木日");
 const han = /[\p{Unified_Ideograph}〇]/gu;
-const phrases = [
-  "太棒了，柠柠答对啦！",
-  "柠柠，你把这个字认出来啦！",
-  "答对啦，给柠柠点个赞！",
-  "柠柠，读得真清楚！",
-  "耶，柠柠又认对一个字！",
-  "没错，就是这个字，柠柠真棒！",
-  "好棒呀，柠柠记住这个字啦！",
-  "答对啦，柠柠，来击个掌！",
-];
+const praiseClipCount = 7;
 
 const bandit = document.getElementById("bandit");
 const bluey = document.getElementById("bluey");
@@ -41,7 +32,8 @@ const speaker = window.speechSynthesis;
 
 let state = restoreProgress();
 let pageSize = 0;
-let previousPhrase = -1;
+let nextPraise = 0;
+let praiseAudio;
 let currentUtterance;
 let speechStartTimer;
 let outgoing;
@@ -200,6 +192,7 @@ function selectWord(word) {
   const oldWord = state.current;
   state.current = word;
   stopSpeech();
+  stopPraiseAudio();
   encouragement.textContent = "";
   updateSelection();
   announcement.textContent = `当前汉字：${word}`;
@@ -277,9 +270,16 @@ function speakMandarin(text, rate, pitch, onError, onStart) {
   }
 }
 
+function stopPraiseAudio() {
+  const audio = praiseAudio;
+  praiseAudio = undefined;
+  audio?.pause();
+}
+
 function readCurrentWord() {
+  stopPraiseAudio();
   encouragement.textContent = "正在准备朗读…";
-  speakMandarin(state.current, .76, 1, (message) => {
+  speakMandarin(state.current, .62, 1, (message) => {
     encouragement.textContent = message;
   }, () => {
     encouragement.textContent = "";
@@ -287,12 +287,9 @@ function readCurrentWord() {
 }
 
 function showEncouragement() {
-  const choices = phrases.length - Number(previousPhrase >= 0);
-  let next = Math.floor(Math.random() * choices);
-  if (previousPhrase >= 0 && next >= previousPhrase) next += 1;
-  previousPhrase = next;
-  const phrase = phrases[next];
-  encouragement.textContent = phrase;
+  stopSpeech();
+  stopPraiseAudio();
+  encouragement.textContent = "";
   const cheer = [
     { transform: "translateY(5px) scale(1.035, .94)", offset: .18 },
     { transform: "translateY(-16px) rotate(-8deg)", offset: .46 },
@@ -301,8 +298,18 @@ function showEncouragement() {
   animateCharacter(bluey, cheer, 490);
   animateCharacter(bingo, cheer, 490, 85);
 
-  speakMandarin(phrase, .88, 1.12, (message) => {
-    encouragement.textContent = `${phrase}（${message}）`;
+  const number = String(nextPraise + 1).padStart(2, "0");
+  nextPraise = (nextPraise + 1) % praiseClipCount;
+
+  const audio = new Audio(`assets/audio/praise-${number}.mp3`);
+  praiseAudio = audio;
+  audio.onended = () => {
+    if (praiseAudio === audio) praiseAudio = undefined;
+  };
+  audio.play().catch(() => {
+    if (praiseAudio !== audio) return;
+    praiseAudio = undefined;
+    encouragement.textContent = "夸奖语音没能播放";
   });
 }
 
