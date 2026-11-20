@@ -2,6 +2,7 @@
 
 const storageKey = "ningning-characters-v1";
 const starterWords = Array.from(window.RECOGNITION_WORDS ?? "人大小山水火木日");
+const wordExplanations = window.WORD_EXPLANATIONS ?? {};
 const han = /[\p{Unified_Ideograph}〇]/gu;
 const praiseClipCount = 40;
 
@@ -221,7 +222,7 @@ function stopSpeech() {
   if (shouldCancel) speaker.cancel();
 }
 
-function speakMandarin(text, rate, pitch, onError, onStart) {
+function speakMandarin(text, rate, pitch, onError, onStart, onEnd) {
   if (!speaker || !window.SpeechSynthesisUtterance) {
     onError("当前打开方式不支持语音，请用 Safari 打开本地预览");
     return;
@@ -262,6 +263,7 @@ function speakMandarin(text, rate, pitch, onError, onStart) {
     }
     window.clearTimeout(speechStartTimer);
     currentUtterance = undefined;
+    onEnd?.();
   };
   utterance.onerror = fail;
 
@@ -287,7 +289,7 @@ function stopWordAudio() {
   audio?.pause();
 }
 
-function playWordAudio(url, onFailure) {
+function playWordAudio(url, onFailure, onEnded) {
   const audio = new Audio(url);
   let failed = false;
   const fail = () => {
@@ -301,7 +303,9 @@ function playWordAudio(url, onFailure) {
     if (wordAudio === audio) encouragement.textContent = "";
   };
   audio.onended = () => {
-    if (wordAudio === audio) wordAudio = undefined;
+    if (wordAudio !== audio) return;
+    wordAudio = undefined;
+    onEnded?.();
   };
   audio.onerror = fail;
   audio.play().catch(fail);
@@ -314,14 +318,21 @@ function readCurrentWord() {
   encouragement.textContent = "正在准备朗读…";
   const word = state.current;
   const codePoint = word.codePointAt(0).toString(16);
+  const explanation = wordExplanations[word];
+  const playExplanation = () => {
+    if (!explanation || state.current !== word) return;
+    playWordAudio(`assets/audio/explanations/${codePoint}.mp3`, () => {
+      encouragement.textContent = "";
+    });
+  };
   const useSystemVoice = () => {
     speakMandarin(word, .62, 1, (message) => {
       encouragement.textContent = message;
     }, () => {
       encouragement.textContent = "";
-    });
+    }, playExplanation);
   };
-  playWordAudio(`assets/audio/words/${codePoint}.mp3`, useSystemVoice);
+  playWordAudio(`assets/audio/words/${codePoint}.mp3`, useSystemVoice, playExplanation);
 }
 
 function showEncouragement() {
