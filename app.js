@@ -1,9 +1,9 @@
 "use strict";
 
 const storageKey = "ningning-characters-v1";
-const starterWords = Array.from("人大小山水火木日");
+const starterWords = Array.from(window.RECOGNITION_WORDS ?? "人大小山水火木日");
 const han = /[\p{Unified_Ideograph}〇]/gu;
-const praiseClipCount = 7;
+const praiseClipCount = 40;
 
 const bandit = document.getElementById("bandit");
 const bluey = document.getElementById("bluey");
@@ -22,6 +22,8 @@ const pagination = document.getElementById("pagination");
 const pageNumber = document.getElementById("page-number");
 const previousPage = document.getElementById("previous-page");
 const nextPage = document.getElementById("next-page");
+const addToggle = document.getElementById("add-toggle");
+const addForm = document.getElementById("add-form");
 const wordButtons = new Map();
 const count = document.getElementById("count");
 const newWords = document.getElementById("new-words");
@@ -34,6 +36,7 @@ let state = restoreProgress();
 let pageSize = 0;
 let nextPraise = 0;
 let praiseAudio;
+let wordAudio;
 let currentUtterance;
 let speechStartTimer;
 let outgoing;
@@ -49,10 +52,10 @@ function restoreProgress() {
     const stored = JSON.parse(raw);
     if (!Array.isArray(stored?.words)) return fallback;
 
-    const words = [...new Set(stored.words.filter((word) =>
+    const storedWords = stored.words.filter((word) =>
       typeof word === "string" && word.match(han)?.[0] === word
-    ))];
-    if (!words.length) return fallback;
+    );
+    const words = [...new Set([...starterWords, ...storedWords])];
     return { words, current: words.includes(stored.current) ? stored.current : words[0] };
   } catch {
     return fallback;
@@ -149,7 +152,8 @@ function goToPage(index, smooth = true) {
 
 function revealSelectedPage() {
   const index = Math.floor(state.words.indexOf(state.current) / pageSize);
-  if (visiblePage() !== index) goToPage(index);
+  const currentPage = visiblePage();
+  if (currentPage !== index) goToPage(index, Math.abs(currentPage - index) === 1);
 }
 
 function animateCharacter(character, frames, duration, delay = 0) {
@@ -192,6 +196,7 @@ function selectWord(word) {
   const oldWord = state.current;
   state.current = word;
   stopSpeech();
+  stopWordAudio();
   stopPraiseAudio();
   encouragement.textContent = "";
   updateSelection();
@@ -276,27 +281,70 @@ function stopPraiseAudio() {
   audio?.pause();
 }
 
+function stopWordAudio() {
+  const audio = wordAudio;
+  wordAudio = undefined;
+  audio?.pause();
+}
+
+function playWordAudio(url, onFailure) {
+  const audio = new Audio(url);
+  let failed = false;
+  const fail = () => {
+    if (failed || wordAudio !== audio) return;
+    failed = true;
+    wordAudio = undefined;
+    onFailure();
+  };
+  wordAudio = audio;
+  audio.onplaying = () => {
+    if (wordAudio === audio) encouragement.textContent = "";
+  };
+  audio.onended = () => {
+    if (wordAudio === audio) wordAudio = undefined;
+  };
+  audio.onerror = fail;
+  audio.play().catch(fail);
+}
+
 function readCurrentWord() {
+  stopSpeech();
+  stopWordAudio();
   stopPraiseAudio();
   encouragement.textContent = "正在准备朗读…";
-  speakMandarin(state.current, .62, 1, (message) => {
-    encouragement.textContent = message;
-  }, () => {
-    encouragement.textContent = "";
-  });
+  const word = state.current;
+  const codePoint = word.codePointAt(0).toString(16);
+  const useSystemVoice = () => {
+    speakMandarin(word, .62, 1, (message) => {
+      encouragement.textContent = message;
+    }, () => {
+      encouragement.textContent = "";
+    });
+  };
+  playWordAudio(`assets/audio/words/${codePoint}.mp3`, useSystemVoice);
 }
 
 function showEncouragement() {
   stopSpeech();
+  stopWordAudio();
   stopPraiseAudio();
   encouragement.textContent = "";
-  const cheer = [
-    { transform: "translateY(5px) scale(1.035, .94)", offset: .18 },
-    { transform: "translateY(-16px) rotate(-8deg)", offset: .46 },
-    { transform: "translateY(3px) rotate(4deg)", offset: .78 },
+  const blueyCheer = [
+    { transform: "translateY(7px) scale(1.12, .86)", offset: .14 },
+    { transform: "translate(-7px, -30px) rotate(-14deg) scale(1.08)", offset: .36 },
+    { transform: "translate(5px, -10px) rotate(10deg)", offset: .56 },
+    { transform: "translate(-4px, -25px) rotate(-8deg) scale(1.06)", offset: .72 },
+    { transform: "translateY(5px) scale(1.06, .92)", offset: .88 },
   ];
-  animateCharacter(bluey, cheer, 490);
-  animateCharacter(bingo, cheer, 490, 85);
+  const bingoCheer = [
+    { transform: "translateY(7px) scale(1.12, .86)", offset: .14 },
+    { transform: "translate(7px, -30px) rotate(14deg) scale(1.08)", offset: .36 },
+    { transform: "translate(-5px, -10px) rotate(-10deg)", offset: .56 },
+    { transform: "translate(4px, -25px) rotate(8deg) scale(1.06)", offset: .72 },
+    { transform: "translateY(5px) scale(1.06, .92)", offset: .88 },
+  ];
+  animateCharacter(bluey, blueyCheer, 820);
+  animateCharacter(bingo, bingoCheer, 820, 100);
 
   const number = String(nextPraise + 1).padStart(2, "0");
   nextPraise = (nextPraise + 1) % praiseClipCount;
@@ -313,7 +361,7 @@ function showEncouragement() {
   });
 }
 
-document.getElementById("add-form").addEventListener("submit", (event) => {
+addForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const enteredWords = newWords.value.match(han) ?? [];
   if (!enteredWords.length) {
@@ -321,6 +369,7 @@ document.getElementById("add-form").addEventListener("submit", (event) => {
     return;
   }
 
+  const targetWord = enteredWords[0];
   const known = new Set(state.words);
   const additions = [];
   for (const word of enteredWords) {
@@ -328,19 +377,30 @@ document.getElementById("add-form").addEventListener("submit", (event) => {
     known.add(word);
     additions.push(word);
   }
-  if (!additions.length) {
-    addStatus.textContent = "这些字已经在字库里了。";
-    return;
+  if (additions.length) {
+    state.words.push(...additions);
+    appendWordButtons(additions);
   }
 
-  state.words.push(...additions);
-  appendWordButtons(additions);
-  updateSelection();
   const saved = saveProgress();
+  selectWord(targetWord);
+  revealSelectedPage();
   newWords.value = "";
-  addStatus.textContent = saved
-    ? `已添加 ${additions.length} 个字。`
-    : `本次已添加 ${additions.length} 个字，关闭页面后可能丢失。`;
+  if (!additions.length) {
+    addStatus.textContent = `已定位到“${targetWord}”。`;
+  } else if (saved) {
+    addStatus.textContent = `已添加 ${additions.length} 个字，并定位到“${targetWord}”。`;
+  } else {
+    addStatus.textContent = `已添加并定位到“${targetWord}”，关闭页面后可能丢失。`;
+  }
+});
+
+addToggle.addEventListener("click", () => {
+  const willOpen = addForm.hidden;
+  addForm.hidden = !willOpen;
+  addToggle.setAttribute("aria-expanded", String(willOpen));
+  addToggle.textContent = willOpen ? "×" : "＋";
+  if (willOpen) newWords.focus();
 });
 
 previousButton.addEventListener("click", () => moveBy(-1));
